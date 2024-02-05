@@ -1,0 +1,81 @@
+\chapter{Steady State Analysis of the Gray-Scott Reaction System}
+\label{ch:app1}
+\paragraph{Calculation of the steady states}
+The steady state condition prescribes 
+\begin{align}
+\label{app:1}
+0 \overset{!}{=} \frac{du}{dt} &= -\rho u v^2 + F(1-u) = f_1(u,v)\\
+\label{app:2}
+0 \overset{!}{=} \frac{dv}{dt} &= \rho u v^2 - (F + \kappa) v = f_2(u,v)
+\end{align}
+Combining \eqref{app:1} and \eqref{app:2} leads to
+\begin{align}
+\label{app:3}
+u = 1 - \frac{F + \kappa}{F}
+\end{align}
+Plugging \eqref{app:3} into \eqref{app:2} gives
+\begin{align}
+- \frac{F + \kappa}{F} v(v^2 + \rho v - (F + \kappa)) = 0
+\end{align}
+The trivial steady state is
+\begin{align}
+\vec{x}_{s1} = 
+\begin{bmatrix}
+1.0 & 0.0
+\end{bmatrix}^T
+\end{align}
+The two other steady states are
+\begin{align}
+\vec{x}_{s2/3} = 
+\begin{bmatrix}
+\frac{1}{2} (1 \pm \sqrt{1 - 4 \frac{(F+\kappa)^2}{F \rho}}) &
+\frac{F}{2 (F + \kappa)} (1 \mp \sqrt{1 - 4 \frac{(F + \kappa)^2}{F \rho}})
+\end{bmatrix}
+\end{align}
+For the given parameters ($F = 0.04$, $\kappa = 0.06$ and $\rho = 1.0$) one has
+\begin{align}
+\vec{x}_{s2} = \vec{x}_{s3} = 
+\begin{bmatrix}
+0.5 & 0.2
+\end{bmatrix}^T
+\end{align}
+
+\paragraph{Classification of Eigenvalues}
+The Jacobian of the system is
+\begin{align}
+J = \begin{bmatrix}
+\frac{\partial f_1}{\partial u} & \frac{\partial f_1}{\partial v} \\[0.3em]
+\frac{\partial f_2}{\partial u} & \frac{\partial f_2}{\partial v}
+\end{bmatrix}
+=
+\begin{bmatrix}
+-\rho v^2 - F & -2 \rho u v \\[0.3em]
+\rho v^2 & 2 \rho u v - (F + \kappa)
+\end{bmatrix}
+\end{align}
+For the given parameters and at the steady state $\vec{x}_{s1}$ this is
+\begin{align}
+J_{s1} = \begin{bmatrix}
+-0.04 & 0 \\
+0 & -0.1
+\end{bmatrix}
+\end{align}
+The eigenvalues of this matrix are $\lambda_{11} = -0.1$ and $\lambda_{12} = -0.04$. Since $\Re(\lambda_{11}) < 0$ and $\Re(\lambda_{12}) < 0$ this steady state is stable. \par
+For the given parameters and the steady states $\vec{x}_{s2} = \vec{x}_{s3}$ this is
+\begin{align}
+J_{s2} = J_{s3} = 
+\begin{bmatrix}
+-0.08 & -0.2 \\
+0.04 & 0.1
+\end{bmatrix}
+\end{align}
+The eigenvalues of this matrix are the roots of the characteristic polynomial
+\begin{align}
+(-0.08-\lambda)(0.1-\lambda)+0.08=\lambda (\lambda - 0.02)
+\end{align}
+One obtains $\lambda_{21} = \lambda_{31} = 0$ and $\lambda_{22} = \lambda_{32} = 0.02$.
+%
+%
+%
+%
+%

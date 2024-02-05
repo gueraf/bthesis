@@ -1,0 +1,15 @@
+\chapter{Stochastic Simulations on Parallel Platforms}
+\chapterprecishere{"The way the processor industry is going, is to add more and more cores, but nobody knows how to program those things. I mean, two, yeah; four, not really; eight, forget it."}{\hfill -- Steve Jobs \cite{clarke_ten_2011}}
+
+In accordance with Moore's law exponential growth in the level of integration of microprocessors has been observed for more than five decades. As briefly discussed in the introduction to this thesis this does not necessarily imply equal growth rates in processor performance. In order to harness the enormous raw computing power of modern architectures, it is necessary to develop parallel applications. 
+
+In this chapter two different parallel platforms are presented that are used to enable accelerated implementations of the tau-leaping algorithm. At first a general overview about features, differences and similarities of both platforms is given. Subsequently a more detailed account on ideas, considerations and techniques incorporated into the final implementation follows. 
+
+A lot of research about stochastic simulation algorithms on various parallel platforms has been done in the recent years. Selected examples include \cite{tian_parallel_2005} (OpenMP), \cite{kent_condor-copasi:_2012}, \cite{burrage_compute-intensive_2005} (distributed memory cluster), \cite{macchiarulo_massively_2008} (FPGA) and \cite{nobile_cutauleaping:_2014, li_efficient_2010, klingbeil_stochsimgpu:_2011, vigelius_accelerating_2011} (GPGPU). Depending on application, platform and algorithm significant speedups could be achieved. A novelty of the simulator presented in this thesis is - to the extent of the author's knowledge - the exclusively stochastic handling of diffusion in combination with the tau-leaping algorithm in an approach based on  data parallelism. 
+
+%Burrage K, Burrage P, Hamilton N, Tian T (2006) Compute-intensive simulations for cellular models. In: Parallel Computing for Bioinformatics and Computational Biology: Models, Enabling Technologies, and Case Studies. pp. 79–119.
+
+%\section{GPGPU}
+\input{chapters/3pplatforms/31GPGPU}
+%\section{Multi-core CPU}
+\input{chapters/3pplatforms/32multi_cpu}

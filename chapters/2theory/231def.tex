@@ -1,0 +1,35 @@
+\subsection{Definitions} % Remove?
+\label{ch:def_stoch}
+Let there be a chemical reaction system with species $X_i$, $i=1, \ldots,N$ and reactions $R_j$, $j=1, \ldots,M$. Now, the state of the system $\vec{x}(t)$ at time $t$ is determined by the number of particles $x_i$ of the species $X_i$, i.e.\ $\vec{x}(t) = \begin{bmatrix} x_1(t) & x_2(t) & \ldots & x_N(t)\end{bmatrix}^T$. The initial state of the system at time $t_0$ is $\vec{x}_0 = \vec{x}(t_0)$. The state change vector $\vec{\nu_j}$ of reaction $R_j$ is defined such that when the reaction takes place, the state of the system changes from $\vec{x}$ to $\vec{x} + \vec{\nu}_j$. The $i$-th component of the state change vector gives the number of particles that are consumed ($\nu_{ij} < 0$) or created ($\nu_{ij} > 0$) when reaction $R_j$ occurs. Again, we will only consider spatially homogeneous (i.e.\ well-stirred) systems in the beginning. 
+
+The fundamental assumption of the deterministic description is that the probability of reaction $R_j$ taking place during the time interval $\lbrack t, t + dt)$ is (cite!)
+\begin{align}
+\label{eq:assumption}
+\alpha_j(\vec{x}(t)) \, dt + \mathcal{O}(dt^2)
+\end{align}
+
+The propensity function $\alpha_j$ of reaction $R_j$ is dependent on the state of the system $\vec{x}(t)$. In its most general form, it is given as
+\begin{align}
+\label{eq:propensity}
+\alpha_j(\vec{x}(t)) = \Omega k_j \prod_{i=1}^N \binom{x_i}{r_{ij}} \Omega^{-r_{ij}}
+\end{align}
+where $k_j$ is the reaction rate of reaction $R_j$, $x_i$ the number of molecules of species $X_i$ at time $t$. Reaction $R_j$ consumes $r_{ij}$ molecules of species $X_i$. The binomial coefficient $\binom{n}{k} = \frac{n!}{k!\,(n-k)!}$ gives the number of distinct subsets of size $k$ from a set of size $n$. In the context of chemical reactions this is the number of different scenarios that can occur when a reaction requires the collision of $k$ out of $n$ available particles. $\Omega$ is the number of molecules per volume unit associated to unit concentration in the deterministic model. Chapter \ref{ch:scaling} gives a detailed explanation of why this scaling factor is needed. 
+
+Considering the local reactions from the Gray-Scott model, one gets the following propensity functions: \par
+Generation of U \eqref{eq:r1}:
+\begin{align}
+\alpha_1 = F \Omega
+\end{align}
+Degradation of U \eqref{eq:r2}
+\begin{align}
+\alpha_2 = F u
+\end{align}
+Degradation of V \eqref{eq:r3}
+\begin{align}
+\alpha_3 = (F + \kappa) v
+\end{align}
+Autocatalytic Conversion \eqref{eq:r4}
+\begin{align}
+\alpha_4 = \rho \frac{u v (v-1)}{2 \Omega^2}
+\end{align}
+\paragraph{Remark:} (Work in progress!) Be careful about the 2! Limit of propensity formula, $\Omega$, equivalence of both models. In order to simulate the same system, the parameter $\rho = 1.0$ in the deterministic model corresponds to $\rho = 2.0$ in the stochastic case.

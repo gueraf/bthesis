@@ -1,0 +1,90 @@
+\section{Performance Analysis}
+\label{ch:perf}
+Simulation platforms: GTX 580, ...
+% a9xxx : 3rd-generation nodes (2011) with 4 12-core AMD Opteron 6174 CPUs and InfiniBand network
+
+\paragraph{Optimization of the GPU version} \label{ch:gpuopt} A GPU is a powerful but highly complex device. In order to ensure that an application uses the available resources efficiently performance evaluation and iterative optimization must be an integral part of the development process. The CUDA framework comes with advanced profiling tools (e.g.\ the Nvidia Visual Profiler) that automatically detect some of the worst pitfalls in GPU programming and can support the developer in trying to avoid them. 
+
+
+In the following some optimization ideas that arouse during the development process of the GPU tau-leaping simulator are discussed. 
+
+\begin{description}
+\item[Initial] In chapter \ref{ch:gpuimplementation} three different approaches towards implementing diffusion were presented. In table \ref{tab:opti} execution times of one complete simulation step (i.e.\ tau calculation, reaction and diffusion) are given for each of the variants. As expected, the naive kernel performs worst since it does not used fast shared memory. The fact that \texttt{kernel\_shared} outperforms the more sophisticated alternative \texttt{kernel\_four}, on the other hand, might be surprising. In \ref{atomics} it has been shown that atomic operations on CUDA-enabled GPUs are significantly slower than regular memory transactions (up to 100x). In reality, however, it seems that the slowdown due to the overhead of three additional kernel launches and a more irregular access pattern overweights the benefits of avoiding atomics in global memory. The main reason for this result is definitely the accelerated hardware support for atomic operations in modern GPUs such as the Nvidia GeForce GTX 580 (in general compute capability $\geq$ 2.0). Another contributing factor is the small degree of the worst case collision, i.e.\ a maximum of four threads can possibly access a value in global memory at the same time. On GPUs it is often the case that a simple, computationally more expensive algorithm with simple control flow outperforms a complex, more efficient implementation that would be faster on a CPU. In the following only \texttt{kernel\_shared} is considered since it performed best in all stages of development and in the final simulator. 
+\item[Combination of reaction and diffusion] As mentioned before the reaction and the diffusion operation can be merged. All information that is needed for simulating the local reactions is available within the diffusion kernel. Consequently the overhead of one kernel launch and more importantly several costly operations in global memory can be avoided. The relative speedup of this optimization is $\approx 4.3\%$. 
+\item[Register count optimization] In chapter \ref{ch:gpuimplementation} the remark has been made that multiprocessor registers have to be considered a valuable resource in GPGPU computing. The reason will become obvious now: The original implementation of the reaction-diffusion kernel occupies 63 registers. Considering a block size of 512 threads (i.e.\ a 8x8x8 grid is used to reduce the number of global memory atomic operations) and 32768 registers that are available on each SM, only one block can reside on it at a time. This means that the number of threads that are available for execution in case a warp stalls to wait for a memory transaction is limited. As a result of the low \textit{occupancy} memory latency cannot be hidden by fast context switching. By using switches such as \texttt{-maxrregcount} the compiler can be forced to reduce the number of registers occupied by the kernel. Values that do not fit into registers any more are spilled to global memory. Trying to hide global memory latency by spilling variables to global memory may sound strange, but since heavily used values are kept in a on-chip L1 cache the approach is promising. By limiting the number of registers per thread to 31 two blocks can be scheduled per SM at the same time. The relative speedup obtained for the tau-leaping simulator is 11.2\%. 
+
+It it obvious that the best alternative to forcing the compiler to lower register counts is not using a great number of registers in the first place. In a complex kernel such as the three-dimensional reaction-diffusion example where local as well as global boundary conditions and special cases have to be handled and comparably large PRNG states have to be kept in local memory reducing the number of registers is a nontrivial task. In future work together with improved compilers that apply more advanced optimization techniques based on compile time knowledge and control flow analysis a further increase in performance can be obtained. 
+
+\item[Increase work per thread] Even in a framework such as CUDA that heavily relies on data parallelism a solution that exposes as much concurrent work as possible might not be the fastest. A good example for this optimization approach can be found in an example by Nvidia's Mark Harris \cite{nvidia reduction}. For the reaction-diffusion kernel under consideration it turns out that the average execution time of a simulation steps is minimized if every thread handles 16 compartments. This values has been obtained by heuristic experiments and depends on GPU generation and model. For the concrete example a considerable relative speedup of 39\% is achieved. 
+\end{description}
+
+\begin{table}[]
+\centering
+\newcolumntype{d}[1]{D{.}{\cdot}{#1} }
+\begin{tabular}{|l|r|r|}
+\hline
+ \textbf{Optimization} & \textbf{Time / simulation step (ms)} & \textbf{Relative speedup}\\ \hline
+ Initial (naive) & 21.98 & --- \mbox{     }\\ \hline
+ Initial (shared) & 16.78 & --- \mbox{     }\\ \hline
+ Initial (four) & 18.35 & --- \mbox{     }\\\hline
+ Combination R\&D & 16.06 & 4.3\% \\ \hline
+ Register count & 14.26 & 11.2\% \\ \hline
+ Work per thread &  8.70 & 39.0\% \\ \hline
+\end{tabular}
+\caption{Execution time per simulation step and relative speedup of selected optimization steps. Absolute times are negatively affected by the performance measurement itself since additional synchronization is needed. Values obtained during the standard 128x128x128 compartment simulation of the Gray-Scott model. }
+\label{tab:opti}
+\end{table}
+
+\paragraph{Optimization of the CPU version} Due to the rather coarse grained task parallelism approach of OpenMP optimizing methods for the CPU version are limited. Avoiding the overhead of one fork-join operation per step by introducing one large parallel region reduces the execution time per step by approximately 50\% (1.05s vs.\ 0.54s on an Intel Core i5-2430M with four threads\ref{todo check consistency}). Further optimization techniques may involve the use of vector instructions (SSE, AVX) or the introduction of cache-optimized access patterns (tiling, space-filling curve). Those techniques are highly complex to implement and far beyond scope. In this thesis the potential of two parallel platforms for accelerating stochastic simulations in time-limited academic projects is assessed. In this framework an optimal solution in terms of efficiency is neither possible to achieve nor a necessity. 
+
+\paragraph{GPU strong domainsize} Medium sized system: performance leader \\
+by no means perfect: peak throughput: schoenrechnen \\
+
+\paragraph{CPU scaling number of threads} Memory limited and scaling
+
+\paragraph{resume} Difference factor. But in reality highly optimized version. CUDA forces developer to vectorize, makes it easy. 
+
+\ifdebug
+1. 1 second simulation of tau leaping cpu 1-48 threads and naive, chessboard
+2. GPU optimization steps
+3. gpu scaling: size of system
+3. same system
+
+
+
+\begin{itemize}
+\item Cite 'Debunking ...'
+\item Speedup GPU vs.\ CPU
+\item Bandwith vs. theoretical
+\item Ideas to optimize
+\end{itemize}
+Simulation Performance?
+\begin{itemize}
+\item deviceQuery GTX 580 (global memory: 1535 MB, 16 SM, 32 CC/SM, GPU clock 1,62 GHz, Memory CR 2016 MHz, M Bus Width 384-bit, Smem / block: 49152 bytes, registers per block 32768, tpb 1024, tpSM 1536)
+\item Time per step
+\item Time to solution
+\item Bandwidth estimation
+\item FLOP/s from cuvpp?
+\item Optimizations: Approaches to diffusion
+\item Occupancy: PTX, ...
+\item Several cells per block
+\item GPU outperforms CPU by a factor of 25x to 100x (Nobile)
+\end{itemize}
+
+\ifdebug
+Optimization: Reduce # register -> occupancy -> hide latency
+\fi
+
+\ifdebug
+\section{Comparison of of both systems and implications on implementation strategies}
+fields of application
+
+\begin{itemize}
+\item No complex memory hierarchy
+\item Tiling is natural on GPU
+\item ...
+\item data level parallelism vs.\ thread parallelism
+\end{itemize}
+rule of thumb: complex control flow: cpu, simple control view, parallelizable, vectorization, data centric
+\fi
+\fi

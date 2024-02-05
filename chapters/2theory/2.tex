@@ -1,0 +1,11 @@
+\chapter{Approaches to Simulating Chemical Reaction-Duffusion Systems}
+\chapterprecishere{"Theory without practice cannont survive and dies as quickly as it lives. He who loves practice without theory is like the sailor who boards ship without a rudder and compass and never knows where he may cast."}{\hfill -- Leonardo da Vinci \cite{brym_sociology:_2006}}
+
+In this chapter, the two fundamental approaches towards modeling chemical reaction-diffusion systems are presented. On the one hand, deterministic models based on rate laws and differential equations are the traditional way of describing the dynamic evolution of a system over time. Stochastic models, on the other hand, are based on the intrinsically random behavior of such systems. Unlike in the deterministic case, running a stochastic simulation algorithm twice gives two possible, but usually completely different solutions, each representing one possible scenario of how the system may develop over time in reality. Often averaging the states obtained by a great number of stochastic simulations yields the solution of the deterministic simulation, however, this is not always the case. For some models, especially those representing biochemical systems, stochastic simulations can give more insight. Whenever the presence of one or more species can heavily affect the dynamic evolution of the overall system (i.e.\ by enabling or disabling a specific reaction channel), but the absolute number of molecules is low, the intrinsic randomness in particle movement has to be considered. Stochastic effects can only be modeled by a stochastic approach, deterministic algorithms are not applicable in this case. 
+%
+%\section{Illustrative Model: The Gray-Scott System}
+\input{chapters/2theory/21illust_example}
+%\section{Deterministic Simulation}
+\input{chapters/2theory/22determ_sim}
+%\section{Stochastic Simulation}
+\input{chapters/2theory/23stoch_sim}

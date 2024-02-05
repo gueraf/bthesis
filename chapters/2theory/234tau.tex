@@ -1,0 +1,143 @@
+\subsection{Tau-leaping Algorithm}
+\ifdebug
+Be careful about probability and probability density!!! \\
+\fi
+The Gillespie Algorithm presented in the previous chapter enables exact numerical simulations of well-stirred chemical reaction systems. It takes account for the inherent randomness in such systems and obeys the same microphysical principles that underlay the Chemical Master Equation. In addition, the algorithm is relatively easy to implement. In practice, however, it turns that even for moderately-sized systems the computational costs of applying the Gillespie algorithm are prohibitive. This is especially true for real-world applications where not just one single trajectory is needed, but a great number of samples must be obtained to estimate probability densities. For every single reaction the system needs to be updated and (some) propensity values have to be recalculated. Consequently, the temporal evolution is obtained up to a level of detail that is neither useful nor necessary for typical applications. It is obvious that there is a need for accelerated (parallelizable) stochastic simulation algorithms. 
+
+In the following, the tau-leaping algorithm originally proposed in \cite{gillespie_approximate_2001} is presented. "By making a minor sacrifices in simulation accuracy, major gains in performance can bet obtained." Considering the overall principle of the algorithm, a clear similarity to the explicit Euler method applied to deterministic models can be observed. 
+
+Equation \eqref{eq:probnot} in the previous chapter gives the probability that a reaction $R_j$ does not fire in an interval $\lbrack t,t+\tau)$. The probability density that it fires in the instant $t+\tau$ is
+\begin{align}
+f_{1,j}(\tau) = f_{0,j}(\tau) \cdot \alpha_j = \alpha_j \exp(-\alpha_j \tau)
+\end{align}
+The time one has to wait until reaction $R_j$ fires is therefore exponentially distributed, i.e.\ $\tau \sim \operatorname{Exp}(\alpha_j)$. Without loss of generality, due to the memorylessness of the exponential distribution, i.e.\ $\mathcal{P}(\tau > t + s|\tau > t) = \mathcal{P}(\tau > s)$ the interval $\lbrack0,\tau)$ can be considered. Let $k$ be the number of times the reaction takes place in this interval. Then the probability that $R_j$ fires exactly zeros times is
+\begin{align}
+\begin{split}
+\mathcal{P}(k=0) = \int_\tau^\infty f_{1,j}(t) dt =
+\int_\tau^\infty \alpha_j \exp(-\alpha_j t) dt = \exp(-\alpha_j \tau)
+\end{split}
+\end{align}
+The probability that $R_j$ fires exactly once in the interval is
+\begin{align}
+\begin{split}
+\mathcal{P}(k=1) &= \int_0^\tau f_{1,j}(x) \left( \int_{\tau-x}^\infty f_{1,j}(t) dt \right) dx \\
+&= \int_0^\tau \alpha_j \exp(-\alpha_j x) \left( \int_{\tau-x}^\infty \alpha_j \exp(-\alpha_j t) dt \right) dx \\
+&= \alpha_j \tau \exp(-\alpha_j \tau)
+\end{split}
+\end{align}
+where $x \in \lbrack 0,\tau)$ is the time when $R_j$ actually fires. The inner integral gives the probability that the reaction does not fire thereafter. 
+
+The probability that $R_j$ fires exactly twice in the interval is 
+\begin{align}
+\begin{split}
+\mathcal{P}(k=2) &= \int_0^\tau f_{1,j}(x) \left( \int_x^\tau f_{j,1}(y) \left( \int_{\tau-x-y}^\infty f_{1,j}(t)dt \right) dy \right) dx \\
+&= \frac{(\alpha_j \tau)^2}{2} \exp(-\alpha_j \tau)
+\end{split}
+\end{align}
+It can be shown that for arbitrary $l \in \mathbb{N}_0$ the following formula for the probability of counting exactly $l$ firings in the interval is (cite Grimmett, pg. 247, 248)
+\begin{align}
+\mathcal{P}(k=l) = \frac{(\alpha_j \tau)^l}{l!} \exp(-\alpha_j \tau)
+\end{align}
+The number of times reaction $R_j$ takes place in the interval $\lbrack 0,\tau)$ is therefore Poisson distributed, i.e.\ $l \sim \operatorname{Pois}(\alpha_j \tau)$. This result is the main idea used in the tau-leaping algorithm. 
+
+Up to now, the implicit assumption that $\alpha \ne \alpha(\vec{x}(t))$ was made. Reconsidering equation \eqref{eq:propensity}, this is not the case. After each firing of a reaction the state changes and so do (in general) the propensities. For the tau-leaping algorithm, however, the assumption is made that the propensities remain approximately constant during a time interval of length $\tau$. Mathematically this can be formulated as follows:
+\begin{align}
+\abs{\alpha_j(\vec{x}(t+\tau)) - \alpha_j(\vec{x}(t))} \leq \epsilon \alpha_0(\vec{x}(t))
+\end{align}
+where $0 < \epsilon \ll 1$ is a parameter defined by the user to control model accuracy.  
+
+If this so-called Leap Condition (cite Gillespie) is satisfied, the number of firings for each of the $M$ reactions can be approximated by a Poisson random variable with mean $\alpha_j \tau$. The state of the system at time $t + \tau$ is
+\begin{align}
+\vec{x}(t+\tau) = \vec{x}(t) + \sum_{j=1}^M k_j \vec{\nu}_j
+\end{align}
+where $k_j \sim \operatorname{Pois}(\alpha_j \tau)$.
+
+The task of finding a suitable $\tau$, however, is nontrivial. A time step that is too long makes the simulation inaccurate, one that is too short increases computing time. Over the years a variety of different procedures have been proposed (cite some). One of the most sophisticated $\tau$-selection formulas is described in (Cao et al. from R-leap). It is given as follows:
+\begin{align}
+\label{eq:tau}
+\tau = \min\left\{ \frac{\max \left\{ \frac{\epsilon x_i(t)}{g_i}, 1\right\}}{\abs{\mu_i(\vec{x}}}, 
+\frac{\max \left\{ \frac{\epsilon x_i(t)}{g_i}, 1 \right\}^2}{\abs{\sigma_i^2(\vec{x}}} \right\}
+\end{align}
+where $I_{rs}$ is the set of all reactant species in the system. For these species the parameter $g_i$ is defined as follows:
+\begin{align}
+g_i = h_i + \frac{h_i}{n_i} \sum_{j=1}^{n_i-1} \frac{j}{x_i(t) - j}
+\end{align}
+$h_i$ denotes the highest order of reaction in which species $X_i$ appears as a reactant, $n_i$ is the number of $X_i$ molecules that are consumed in any of the highest order reactions (Check with 19 of R-leaping paper). The terms $\mu_i$ and $\sigma_i^2$ are given by 
+\ifdebug
+(What do $\mu$ and $\sigma$ mean?)
+\fi
+\begin{gather}
+\mu_i(\vec{x}) = \sum_{j=1}^M \nu_{ij} \alpha_j(\vec{x}) \\
+\sigma_i^2(\vec{x}) = \sum_{j=1}^M \nu_{ij}^2 \alpha_j(\vec{x})
+\end{gather}
+
+\paragraph{Remark: Negative populations}
+Due to the unboundedness of the Poisson distribution, it can happen that in a leaping step more molecules are consumed than there are available in the system. The resulting negative population of the species is unphysical since the system cannot be in such a state in reality. A lot of different measures to avoid this problem have been proposed (e.g.\ \cite{cao_avoiding_2005, anderson_incorporating_2008}). For this thesis, however, the simplest resolution strategy is chosen: A step which creates negative populations is rejected, the proposed tau is reduced, e.g.\ $\tau_{new} = \tau_{old} / 2$. 
+\newpage
+
+The tau-leaping algorithm can be outlined as follows: 
+
+\begin{framed}
+\begin{algorithm}[H]
+\DontPrintSemicolon
+\KwIn{Initial state $\vec{x}_0$, propensity functions $\alpha_j$, time $t_{end}$}
+\KwOut{State $\vec{x}(t)$ for $t \in \lbrack t,t_{end}\rbrack$}
+ \textbf{Initialization:} Set time $t = 0$ and state $\vec{x} = \vec{x}_0$.\;
+ \While{$t < t_{end}$}{
+  \For{$j = 1$ \KwTo $M$}
+  {
+  Compute the propensity function $\alpha_j(\vec{x})$.\;
+  }
+  Compute the time step $\tau$ according to \eqref{eq:tau}.\;
+  \For{$j = 1$ \KwTo $M$}
+  {
+  Generate a random number $k_j \sim \operatorname{Pois}(\alpha_j \tau)$, i.e.\ the number of time reaction $R_j$ fires.\;
+  }
+  \If{any of the populations would be negative}{
+   Set $\tau = \tau / 2$\;
+   Continue at the beginning of the loop\;
+   }
+  Set $\vec{x} = \vec{x} + \sum_{j=1}^M k_j \vec{\nu}_j$.\;
+  Set $t = t + \tau$.\;
+ }
+ \caption{Tau-leaping Algorithm}
+\end{algorithm}
+\end{framed}
+
+By leaping over a different time slots instead of considering every individual reaction the computational effort of stochastic simulations can be reduced significantly. The losses in simulation accuracy must be considered, but usually remain within a tolerable range. In the next chapter parallel implementations for multi-core CPU and GPU of the tau-leaping algorithm derived above will be presented. 
+
+\mbox{\color{red}{solve gray-scott and compare to SSA}}
+
+\ifdebug
+\begin{itemize}
+\item Exact since they generate statistically exact sample paths. Typically, one generates many sample paths (Ausprägungen) to approximate the underlying probability distribution of the system of interest. 
+\item But this doesn't work for most systems, since it is computationally too expensive. 
+\item Although progress has been made, an exact procedure that simulates every reaction is too inefficient for most realistic problems. 
+\item One large population blocks simulation, stiffness, timescales, doesn't influence dynamics of system
+
+\item Approximate method: Major gains in simulation speed obtained by minor sacrifices in simulation accuracy. 
+\item Outperforms SSA: Several reactions per step
+\item Assumption: Propensity functions $\alpha_k(X(t))$ are relatively constant in a short time interval $(t,t+\tau)$. 
+\item Similar to explicit Euler method. Natural connection between SSA in stochastic regime and explicit Euler method applied to the chemical Langevin equation. 
+\item Question: How to select the tau?
+\item If time-step is too small, then use explicit SSA (Gillespie)
+\item Problem: Negative populations --> Solutions proposed in ...
+\item How to avoid? R-leaping, SSA for critical reactions
+\item Stiffness: Presence of multiple timescales in the system
+\item you can plot histogram (pdf for a number of molecules of some specie at some fix time) for different values of parameter epsilon and compare them with histogram from Gillespie
+\item this shows what is the role of epsilon
+\item To do it, use some non-stiff system, otherwise gillespie will be too slow. E.g. you can use decaying dimerization with non stiff coefficient, or I can give you some other example if you want. Or use the Gray-Scott without diffusion, since it is the illustrative model
+\end{itemize}
+\fi
+
+\subsection{Parameter Rescaling}
+\label{ch:scaling}
+The scaling constant $\Omega$ introduced in chapter \ref{ch:def_stoch} gives the number of molecules per volume unit associated with unit concentration in the deterministic model. It can also be though of as the fixed subvolume in the complete domain within which the molecules can move. Concentration is then defined as 
+\begin{align}
+c = \frac{x}{\Omega}
+\end{align}
+for $x$ molecules of species $X$. In chemistry, the product of Avogadro's constant $N_A = \unit[6.022 \cdot 10^{23}]{mol^{-1}}$ and a fixed volume of unit size (e.g.\ 1l) is often used as a value for $\Omega$. This, however, is mainly a historic convention and in general, $\Omega$ can be any arbitrary value $\omega > 0$. 
+
+The concept of concentration by definition only makes sense for a macroscopic description of a system. It gives the average number of particles in a fixed control volume. For a system that fulfills the continuum assumption, i.e.\ one for which a macroscopic description is a valid approximation to the microscopic, particle-based reality, the concentration $c(\vec{x})$ at a point $\vec{x}$ in the system barely depends on the chosen control volume containing $\vec{x}$. For small values of $\Omega$, the continuum assumption is violated. In this case the presented deterministic methods are not applicable. If, on the other hand, the number of molecules in a system is large compared to is volume (i.e. $\Omega = \gtrsim 1000$), it can be shown that the deterministic approach based on concentrations and the stochastic approach considering the interaction of individual particles converge \cite{gillespie_deterministic_2009}. This result will be used in chapter \ref{ch:validation} to validate the stochastic simulation tools presented in this thesis by comparing them to the deterministic analytic solutions of several model problems. 
+
+In order to ensure that both, the deterministic and the stochastic model describe the same system, the reaction rates have to be rescaled. The autocatalytic conversion reaction \eqref{eq:r4}, for example, is represented in the deterministic model by the term $\rho_d u v^2$. In the stochastic case, the propensity function of the reaction is $\alpha_4 = \rho_{s} u v (v-1) / (2 \Omega^2)$. For both description to be equal, the relation $\rho_s = 2 \rho_d$ has to hold. For the choice of parameters in this thesis one has $\rho_d = 1.0$ and $\rho_s = 2.0$.

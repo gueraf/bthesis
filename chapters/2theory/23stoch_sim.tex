@@ -1,0 +1,26 @@
+\section{Stochastic Simulation}
+\label{ch:stochsim}
+Another, more recently proposed way of simulating chemical systems are stochastic simulation algorithms (SSA) \cite{gillespie_general_1976}. Unlike in the deterministic case, the solution obtained is not unique, but it only represents one possible way the system can develop in time. In theory, i.e.\ on a computer with infinite precision equipped with a perfect source of random numbers, the probability that a SSA will give exactly the same result in two or more independent runs is zero. In practice, however, a computer is a highly deterministic machine with finite precision. Therefore, the number of possible solutions of a SSA is finite. Since most computers don't have true random generators built in, pseudo-random number generators (PRNG) have to be used. PRNGs can create a sequence of numbers $Z_i$ that is random in the sense that it is compliant with a given probability distribution (usually $Z \sim \mathcal{U}(0,1)$) according to a variety of statistical tests (i.e.\ the TestU01 Big Crush testing battery(cite!)). However, a PRNG is completely defined by its state structure so that for a given state, the sequence of numbers generated thereafter is deterministic. The initial state is usually derived from a seed value. If a SSA is run with a fixed seed value, its output will always be the same. From now on, for the sake of simplicity, the terms "random number generator" and "random number" will be used as synonyms for "pseudo-random number generator" and "pseudo-random number", respectively. 
+
+Compared to the deterministic approach towards simulating chemical reaction systems, the stochastic approach is computationally more demanding. The main reason for this is the high expense at which random numbers are generated on a computer. Despite this disadvantage, the demand for good SSAs in research and industry has been on the rise over the past decade. For a large number of particles of every species in the system, it can be shown that the two approaches are identical, for low particle counts, however, this is not the case. Especially in biochemistry and genetics, some systems are described insufficiently by traditional deterministic models. Often particles which dominate the dynamic behavior of the system are only present in small numbers. In such situations, SSAs are an important tool to enable a more detailed understanding of the system. Noise introduced by the randomness of microscopic processes such as Brownian motion cannot be neglected but is an integral factor that determines system behaviour in practice. 
+
+%\subsection{Definitions}
+\input{chapters/2theory/231def}
+
+%\subsection{Chemical Master Equation}
+\input{chapters/2theory/232mastereq}
+
+%\subsection{Gillespie Algorithm}
+\input{chapters/2theory/233gill}
+
+%\subsection{Tau-leaping Algorithm}
+\input{chapters/2theory/234tau}
+
+\ifdebug
+Alternatives: you can briefly mention R-leaping (just main idea, no need to give all details since we do not use it), and then say that we focus on tau-leaping because sampling in tau-leaping is independent so it can be done in parallel
+
+Compartment approach towards diffusion: Generalization: No every molecule can react with every other molecule, but only within subvolume. \\ you can use some sketch to explain how it works :) The volume of the system is subdivided into a set of uniform subvolumes with spacing lambda. Reactions occur only between molecules within a subvolume $\rightarrow$ CME.
+\fi
+
+%\subsection{Compartment-based Stochastic Simulation of Diffusion}
+\input{chapters/2theory/235compartment}

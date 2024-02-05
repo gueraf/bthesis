@@ -1,0 +1,33 @@
+\subsection{Chemical Master Equation}
+The following derivations are based on ideas presented in \cite{lipkova_stochastic_2011}. Reconsidering equation \eqref{eq:assumption}, the probability that a reaction $R_j$ with propensity function $\alpha_j$ takes place in a time interval $\lbrack t, t+dt)$ is approximately $\alpha_j dt$. Let the time step $dt$ be short enough such that the probability of $R_j$ occurring more than once during the interval is negligible. Then the conditional probability of the system being in state $\vec{x}$ at time $t+dt$ given that it was in state $\vec{x_0}$ at time $t_0$ is
+\begin{align}
+\begin{split}
+\label{eq:diffquot}
+\mathcal{P}(\vec{x},t+dt|\vec{x}_0,t_0) &= \mathcal{P}(\vec{x},t|\vec{x}_0,t_0) \lbrack 1 - \sum_{j=1}^M \alpha_j(\vec{x}) dt \rbrack \\
+&+ \sum_{j=1}^M \mathcal{P}(\vec{x} - \vec{\nu}_j,t|\vec{x}_0,t_0) \,\alpha_j(\vec{x} - \vec{\nu}_j) dt
+\end{split}
+\end{align}
+The first term of the equation represents the case where the system is in state $\vec{x}$ at time $t$ and no reactions take place in the interval $\lbrack t,t+dt)$. The second term takes account for the cases where exactly one of the $M$ reactions occurs. The system must have been in the state $\vec{x} - \vec{\nu}_j$ at time $t$ to reach the state $\vec{x}$ after the firing of $R_j$. 
+
+By rearranging equation \eqref{eq:diffquot} a difference quotient can be obtained. Passing the limit $dt \rightarrow 0$ yields the Chemical Master Equation (CME):
+\begin{align}
+\begin{split}
+\frac{\partial}{\partial t} \mathcal{P}(\vec{x},t|\vec{x}_0,t_0) &= \sum_{j=1}^M \mathcal{P}(\vec{x}-\vec{\nu}_j,t|\vec{x}_0,t_0) \,\alpha_j(\vec{x} - \vec{\nu}_j) \\
+&- \sum_{j=1}^M \mathcal{P}(\vec{x},t|\vec{x}_0,t_0) \,\alpha_j(\vec{x})
+\end{split}
+\end{align}
+The CME of the homogeneous Gray-Scott model in the state $\vec{x} = \begin{bmatrix} U & V\end{bmatrix}^T$ is
+\begin{align}
+\begin{split}
+\frac{\partial \mathcal{P}(U,V)}{\partial t} &= F \Omega \cdot \mathcal{P}(U-1,V) \\
+&+ (U+1)F \cdot \mathcal{P}(U+1,V) \\
+&+ (V+1) (F+\kappa) \cdot \mathcal{P}(U,V+1) \\
+&+ \rho \frac{(U+1) (V-1) (V-2)}{2\Omega^2} \cdot \mathcal{P}(U+1,V-1) \\
+&- \left(F\Omega + UF + V(F+\kappa) + \rho \frac{UV(V-1)}{2\Omega^2}\right) \cdot \mathcal{P}(U,V)
+\end{split}
+\end{align}
+$\mathcal{P}(U,V)$ is used as an abbreviation for $\mathcal{P}(U,V,t|U_0,V_0,t_0)$. 
+
+The solution of the CME of a system with initial conditions $\vec{x}_0 = \vec{x}(t_0)$ gives the conditional probability $\mathcal{P}(\vec{x},t|\vec{x}_0,t_0)$ that the state of the system is $\vec{x}$ at time $t$. Since the number of molecules in the system is in general not limited (i.e.\ in the Gray-Scott model nothing stops reaction \eqref{eq:r1} from creating  U particles), the dimension of the system of ODEs is infinite. In practice, an exact solution can only be obtained for some simple systems. Therefore, in the next chapter a computational algorithm of great practical importance will be presented. 
+%
+%

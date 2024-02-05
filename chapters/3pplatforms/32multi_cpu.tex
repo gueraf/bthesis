@@ -1,0 +1,103 @@
+\section{Multi-core CPU}
+For a long time the main driver of CPU performance growth has been the clock rate. Within the first years of the new millennium, however, it became obvious that this principle could not be exploited for any further progress. For CPU frequencies beyond 3-4 GHz, it is practically impossible to dissipate the heat released in the chip with common CPU coolers, the so-called \textit{power wall} was reached \cite{kuroda_cmos_2001}. In order to enable further performance growth, multi-core architectures were introduced. Instead of trying to improve a single core at enormous expenses, several potentially smaller cores are placed on a single chip. The resulting CPU can then execute several threads truely in parallel, i.e.\ not only just by assigning timeslots to individual threads. The novel approach turned out to be very successful so that the great majority of processors sold nowadays implement a multi-core architecture. 
+
+The downside of this paradigm change from the point of view of a developer is that programs do not automatically execute faster when a new generation of CPUs is introduced. The individual core does not necessarily get any faster and since they are executed one step at a time, sequential programs cannot make use of the increasing number of concurrent computation units in modern chips. 
+
+To allow an application to benefit from the parallel architecture, the developer has to explicitly declare sections that can be run concurrently. In the majority of today's most popular programming languages little to no means of expressing parallelism are provided. Even though this is about to change (C++11 has introduce threads, Java's concurrency package is planned to be given a major overhaul), still a lot of work has to be done in this field. 
+
+In general, there are two different approaches towards enabling concurrency in an application: Using explicit threading subroutines provided by the operating system (OS) or relying on semi-automatic compiler functionality. The former means that the developer has to explicitly create threads, implement scheduling routines and manage synchronization. On Microsoft Windows systems threading is provided as part of the Base Services included in the Windows API, in a Unix-like environment POSIX Threads (Pthreads) can be used. The latter approach is considered to be significantly faster to apply and easier to learn. It is especially useful when already existing legacy code should be parallelized since the structure of the program does not need to be changed significantly. Two of the most commonly used frameworks are Intel Threading Building Blocks (TBB) and the Open Multi-Processing standard (OpenMP). In the back end semi-automatic solutions depend on the native threading routines available on the targeted operating system. Therefore in practice the performance of both approaches is comparable. The additional level of control obtained by explicitly using OS routines comes at the cost of greater development effort. 
+
+\subsection{OpenMP}
+"OpenMP is a specification for a set of compiler directives, library routines, and environment variables that can be used to specify high-level parallelism in Fortran and C/C++ programs. \cite{openmp_architecture_review_board_frequently_2014}" A first version for the Fortran programming language was published in October 1997, support for C/C++ was added in October 1998. The latest version, OpenMP 4.0, was released in July 2013. OpenMP (OMP) implements the fork-join multithreading model, i.e.\ there is one master thread which can be forked to create several other threads. A region of parallel execution is ended by joining all threads with the master. To distribute the work available in a parallel region, OpenMP comes with a variety of scheduling strategies such as static (i.e.\ compiletime) and dynamic (i.e.\ runtime) scheduling. Outside of this region the program is executed sequentially. 
+
+Creating a parallel region in OpenMP is straighforward: In C/C++ the directive \texttt{\#pragma omp parallel} orders the compiler to create several threads by forking the master thread. The number of threads can be prescribed by the developer, set at runtime or determined automatically by the system taking into account the number of physical execution units. If a compiler does not know the standard (or the necessary flags to enable it are not set), the directives will be ignored and in most situations a working serial version of the application can be created. 
+
+By default all the code enclosed by the the braces (\{\ldots\}) specifying beginning and end of the parallel region is executed by ever thread. To tell the compiler that a specific subsection should only be executed once, directives such as \texttt{\#pragma omp single} or \texttt{\#pragma omp master} can be used. The work within a for-loop is shared by adding \texttt{\#pragma omp for} in front of it. If the parallel region consist just of a single loop, this can be shortened to \texttt{\#pragma omp parallel for}. Apart from simple loop parallelization OpenMP offers more advanced features such as reduction, atomic operations, explicit thread synchronization and (debuting in version 3.0) tasks. For an in-depth introduction to all the features of OpenMP the reader shall be referred to an online course by Tim Mattson from Intel\footnote{Tim Mattson is one of the original developers of OpenMP. His video lectures can be found online at \url{http://goo.gl/VObNd1}, the complementary slide at \url{http://goo.gl/bDWka6}.}. 
+
+\subsection{Implementation}
+In the following the implementation details of the multi-core CPU version of the developed tau-leaping simulator will be presented. The OpenMP standard is used for parallelization. In the pseudocode description given in algorithm \ref{alg:pseudocpu} a lot of conceptual similarities to the GPU implementation (see algorithm \ref{alg:pseudogpu}) can be observed. There are, however, certain differences that directly reflect the differences of the underlying hardware. 
+
+\begin{enumerate}
+\item \textbf{Initialization:} Just like in the GPU version, two arrays of type \texttt{int} are used in the algorithm to represent the number of molecules of one species in the individual compartments. For the two species in the Gray-Scott example, these fields are called \texttt{h\_X1a}, \texttt{h\_X1b}, \texttt{h\_X2a} and \texttt{h\_X2b}. Even though all simulation data resides in CPU main memory, the \texttt{h\_} prefix is used to underline the similar structure of both implementations. 
+
+The required reduction operation to find the minimum proposed tau value is a built-in feature of OpenMP (\texttt{\#pragma omp for reduction (min:tau)}) so that there is no need for an additional array to explicitly store candidate values. Furthermore, unlike in the GPU case, no temporary storage for IO operations is needed since data from main memory can be written directly to the HDD. The PRNG states are encapsulated in a helper object of type \texttt{paraRNG}, a class that was developed to enable thread-safe access to a variety of RNG implementations (see section \ref{enum:cpu:rng}). 
+\item \textbf{Parallel region:} An important characteristic of the presented algorithm is the fact that there is solely one large parallel region. It may seem counter-intuitive to make all threads deal with the work introduced by evaluating loop control conditions. However, this additional effort is negligible compared to the overhead that would be introduced if threads were continuously created and destroyed. Sections that shall be executed exactly one are guarded by the directive \texttt{\#pragma omp single}. Unlike in the CUDA implementation where separate kernel invocations are needed, to achieve global synchronization in OpenMP it is not necessary to leave the parallel region. In fact, thread barriers are introduced automatically at reasonable places in the code (e.g. after directives such as \texttt{parallel for} or \texttt{single} and at the end of a parallel region). Implicit synchronization can be disabled in some cases by adding the keyword \texttt{nowait}. 
+\item \textbf{Random number generation:} 
+\label{enum:cpu:rng}
+Within the CUDA framework, due to its good documentation, large number of features and outstanding performance, the cuRAND library is a reasonable choice when random numbers are needed in an application. Considering a generic C++ environment, the situation is not so clear since a great variety of libraries is available. The performance of any tau-leaping implementation relies heavily on the underlying PRNG's ability to provide Poisson-distributed random numbers with varying mean. Benchmarking was used to find a suitable solution for the CPU version of the presented simulator. Candidate libraries were chosen according to a) availability of the required features, b) stochastic correctness (i.e.\ performance in empirical testing toolkits), c) performance in available benchmarks and d) ease of incorporation into existing code. Three libraries were considered for the benchmark: Tina's Random Number Generator Library (TRNG) \cite{bauke_tinas_????}, the GNU Scientific Library (GSL) \cite{gough_gnu_2009} and the pseudo-random number generation library that come with C++11. The results are presented in table \ref{tab:prng_perf}. 
+
+\begin{table}[]
+\centering
+\begin{tabular}{|l|l|l|l|}
+\hline
+ \textbf{Library} & \textbf{Generator} & \textbf{Uniform} & \textbf{Poisson} \\ \hline
+ C++11 & mt19937 & 5.07 & 3.06e-2 \\ \hline
+ GSL & mt19937 & 5.56 & 3.73e-2 \\ \hline
+ TRNG & mt19937 & 4.15 & 12.6 \\ \hline
+ TRNG & lagfib2xor\_19937\_ull & 2.67 & 11.0 \\ \hline
+ TRNG & lagfib4plus\_19937\_ull & 3.31 & 12.0 \\ \hline
+\end{tabular}
+\caption{Performance benchmark of selected random number engines. The test program
+was compiled and executed on an Intel Core i5-2430M @ 2.4 GHz running Ubuntu 14.04 using the GNU C++ compiler in version 4.8.2 with parameter -O3. Execution times measured for four threads with OMP host functions (values rounded, unit: seconds). Testcase 'uniform' takes $10^9$ samples, 'poisson' requests $10^5$ values from Poisson distributions with mean linearly spaced in [4,1200].}
+\label{tab:prng_perf}
+\end{table}
+
+% How much time is spent in the RNG function?
+
+It is interesting to see how the TRNG library outperforms the two alternatives when a random variable $X\sim\operatorname{Unif}(0,1)$ is simulated, but is far behind when Poisson values with varying mean are needed. The reason for this behavior is the enormous expense at which the distribution objects are created that are used to generate $Y\sim\operatorname{Pois}(\lambda)$ from $X\sim\operatorname{Unif}(0,1)$. Since the mean $\lambda$ (i.e.\ the propensity values in the simulation) changes constantly, this cost is never amortized. The C++11 library also needs to create a new (relatively lightweight) distribution object at every access, GSL provides a method that does not explicitly have this requirement. Nevertheless, the built-in library turns out to perform best in a testcase that closely resembles the demand of the real application and was therefore chosen for use in the simulator. Unlike for the GPU implementation, the size of a PRNG state is not of great importance. Due to the small number of threads (orders of magnitued smaller than in GPU applications), the space occupied is negligible. 
+
+To enable safe parallel access to the random number generator, the wrapper class \texttt{paraRNG} was introduced. It initializes a number of PRNGs depending on how many OMP threads are to be created. A unique seed value is derived from the thread IDs. Later, each thread can access the correct state structure by obtaining its ID by calling \texttt{omp\_get\_thread\_num()}. 
+
+The idea that all threads use the same PRNG but different initial states is not the only way to generate random number in a thread-safe way. In fact, sometimes this approach is considered to be flawed. "The hope is that [generators seeded in this way] will generate non-overlapping and uncorrelated subsequences of the original PRNG. This hope, however, has no theoretical foundation." \cite{bauke_tinas_????} For methods such as \textit{Leapfrogging} or \textit{Block splitting} it can be shown that uncorrelated streams of random numbers are created. The clear disadvantage of these approaches is the greater computational complexity of random number generation. Considering the cuRAND library (see \cite{nvidia_curand_2014}), the seed used for the individual generators is by design dependent on the thread index. To maintain comparability between GPU and CPU implementation and since statistical flaws in the presented simulations could be observed by comparison with results from literature, it is justified to use the parallelization approach proposed above. 
+
+\item \textbf{Reaction and diffusion simulation:} 
+Similar to the GPU implementation reaction and diffusion can be combined to be simulated simultaneously avoiding unnecessary overhead. Again, finding a good way to handle the complex spatial dependencies that need to be resolved when simulating diffusion is key to good performance. In the following two approaches are presented, data and considerations on performance are give in chapter \ref{ch:perf}. 
+\begin{enumerate}
+\item \textbf{Atomics} Similar to the naive kernel presented in the GPU context (see chapter \ref{ch:cuda}), this approach makes use of atomic operations to solve situations when two threads want to change the state of a compartment at the same time. The task of simulating reactions and diffusion for all compartments prescribed by a for loop is shared among all OMP threads. Again every thread needs to access and modify the values of all neighbouring compartments. The advanced caching functionalities available on modern CPUs help to lessen the negative effects of the strided access pattern. In OpenMP operations such as incrementation can be made atomic by the directive \texttt{\#pragma atomic}. On most platforms hardware support is available to accelerate atomic operations. 
+\item \textbf{Sixtyfour} Even if atomics are hardware-accelerated, such operations take significantly longer than regular memory transactions (factors of 2-25 are usually observed in practice). Complementary to the approach termed \texttt{kernel\_four} on the GPU atomic operations can be avoided altogether at the cost of a more complex access pattern. If one considers the fact that a thread which simulates a specific compartment needs to update the values of all the six neighbours, it can be concluded that when there are two inactive compartments between two active ones in all three coordinate directions, no conflicting memory operations (i.e.\ race conditions) can occur. Some of the presented approaches for the GPU introduce constraints on the allowed number of compartments (e.g.\ divisibility by 8 of the extent in any direction). In order to maintain a high degree of comparability between CPU and GPU version of the application, it should be avoided to further reduce the number of possible domain configurations that can be handled by both simulators. Therefore, a spacing of three inactive compartments is chosen, i.e.\ only every fourth compartment in any direction is processed by threads in parallel. The activation pattern is visualized in figure \ref{fig:four}. the procedure results in 64 separate stages, in between a synchronization barrier is needed to ensure consecutive execution. 
+\end{enumerate}
+\item \textbf{Differences between OpenMP and CUDA:} OpenMP is an easy to learn high-level approach towards thread-based parallelism while CUDA is data centered, more complex and offers the developer fine-grained control. In consequence, a parallel application can be developed rather quickly with OpenMP. At some point, however, it becomes very complicated to implement complex ideas that would require a greater degree of control over behavior and collaboration of the individual threads. For the concrete example of the thesis this means that concepts such as tiling and vectorization that come naturally in CUDA code can hardly be exploited in the OpenMP version to increase performance. 
+\end{enumerate}
+
+The application was programmed in C++ and built using Nvidia CUDA compiler 6.0.1 and GNU C++ compiler 4.8.3. The code together with build scripts is provided in the supplementary material of this thesis. 
+\newpage
+
+%\begin{framed} %md
+\begin{algorithm}[H]
+\DontPrintSemicolon
+\textbf{Initialization:} \\
+Allocate state arrays $\mathtt{h\_X1}$, $\mathtt{h\_X1b}$, $\mathtt{h\_X2a}$ and $\mathtt{h\_X2b}$. \\
+Initialize random generator, apply initial conditions and write state to file.\;
+\textbf{Simulation loop:}\\
+Set pointers $\mathtt{h\_X1\_old}$, $\mathtt{h\_X1\_new}$, $\mathtt{h\_X2\_old}$ and $\mathtt{h\_X2\_new}$ (Analogous to alg. \ref{alg:pseudogpu}). \;
+\texttt{\#pragma omp parallel} \\
+\While{$\mathtt{t} < \mathtt{t_{end}}$}{
+\texttt{\#pragma omp for reduction(min:tau)}\\
+\For{$\mathtt{every~compartment}$}{
+Compute local proposal for tau.\;
+}
+\While{$\mathtt{true}$}{
+\texttt{\#pragma omp for} \\
+\For{$\mathtt{every~compartment}$}{
+Simulate reactions and diffusion.\;
+}
+\texttt{\#pragma omp for reduction(|:any\_is\_negative)} \\
+\For{$\mathtt{every~compartment}$}{
+Check if any of the populations is negative.\;
+}
+\texttt{\#pragma omp single} \\
+\eIf{$\mathtt{any\_is\_negative}$}{
+$\mathtt{tau} = \mathtt{tau / 2}$\;}{
+\texttt{break} \;
+}
+} %end while true
+\texttt{\#pragma omp single} \\
+\If{$\mathtt{t} \geq \mathtt{write\_counter} * \mathtt{write\_every}$ }{Write current state to file.}
+Swap $\mathtt{h\_X1\_old}$ and $\mathtt{h\_X1\_old}$. Swap $\mathtt{h\_X2\_old}$ and $\mathtt{h\_X2\_old}$. \;
+} %end while t<tend
+\textbf{Finalization:} 
+Write final state to file and deallocate arrays. \;
+\caption{Overview for CPU implementation !!!}
+\label{alg:pseudocpu}
+\end{algorithm}
+%\end{framed}

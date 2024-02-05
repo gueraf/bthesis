@@ -1,0 +1,64 @@
+\section{Illustrative Model: The Gray-Scott System}
+Throughout this thesis, the Gray-Scott reaction system described in \cite{pearson_complex_1993} will be used as a primary example to illustrate the presented techniques, algorithms and results. 
+
+The chemical reaction system consists of two species U and V subject to the reactions as described in the following: \\
+\begin{align}
+\label{eq:r1}
+\cee{\emptyset{} &->[F] U} \\
+\label{eq:r2}
+\cee{U &->[F] \emptyset} \\
+\label{eq:r3}
+\cee{V &->[F+\kappa] \emptyset} \\
+\label{eq:r4}
+\cee{U + 2V &->[\rho] 3V}
+\end{align}
+with positive reaction rate constants $F$, $\kappa$ and $\rho$.
+
+The two species U and V are also subject to diffusion. Approaches towards modelling this spatial dependency of the system will be discussed in chapters (ref) and (ref) for the deterministic and the stochastic case. 
+
+The reactions given above can be interpreted as follows: Reactions \eqref{eq:r1} and \eqref{eq:r2} describe degradation and production of U particles, respectively. Since they are the opposite to each other, the process of production and degradation of U is reversible. Equation \eqref{eq:r3} describes degradation of V particles. Note that there is no direct production of V in the system. Finally, reaction \eqref{eq:r4} describes the autocatalytic\footnote{A reaction is said to be autocatalytic if it is catalyzed by its products \cite[pg.\ 907]{atkins_physical_2009}. In this example, V particles can only be generated if there are already some available in the system to catalyze the reaction.} conversion of U particles to V particles. The symbol $\emptyset$ represents species that are available in excess (i.e.\ not rate-limiting), but are of no further interest for the modeled process. 
+
+The Gray-Scott model is of great interest since it
+\begin{itemize}
+\item can be used to describe real-world phenomena.
+\item is subject to pattern formation (for certain parametrizations).
+\item is computationally expensive due to spatial dependencies.
+\end{itemize}
+All these properties will be examined more closely throughout the thesis. 
+%
+%
+%
+%
+%
+%
+%
+%
+\ifdebug
+
+Reasoning: Molecules must collide before they can react (for 2nd and higher order). $\rightarrow$ reaction within compartment makes sure that molecules are close to each other (have a chance to collide)
+
+\underline{Reactions}
+\begin{align}
+\label{eq:r1}
+\cee{\emptyset{} &->[F] U_{i,j,k}} \\
+\label{eq:r2}
+\cee{U_{i,j,k} &->[F] \emptyset} \\
+\label{eq:r3}
+\cee{V_{i,j,k} &->[F+\kappa] \emptyset} \\
+\label{eq:r4}
+\cee{U_{i,j,k} + 2V_{i,j,k} &->[\rho] 3V_{i,j,k}}
+\end{align}
+with positive reaction rate constants $F$, $\kappa$ and $\rho$.
+
+\underline{Diffusion}
+\begin{align}
+\label{eq:d1}
+\cee{S_{i,j,k} &<->[d_S] S_{i\pm{}1,j,k}} \\
+\cee{S_{i,j,k} &<->[d_S] S_{i,j\pm{}1,k}} \\
+\cee{S_{i,j,k} &<->[d_S] S_{i,j,k\pm{}1}}
+\label{eq:d3}
+\end{align}
+for the two species $\text{S} \in \{\text{U, V}\}$ with positive diffusion constants $d_\text{U}$ and $d_\text{V}$. 
+
+The spatial dependency of the system is reflected by the compartment index (i,j,k). In a uniform, three-dimensional grid with spacing $h$, compartment $C_{i,j,k}$ is equal to the cube $\left[(i-1)h,ih\right] \times \left[(j-1)h,jh\right] \times \left[(k-1)h,kh\right]$. It is assumed that only particles close to each other (i.e.\ within a compartment) can  react according to equations \eqref{eq:r1} - \eqref{eq:r4}. Equations \eqref{eq:d1} - \eqref{eq:d3}, on the other hand, describe how particles can migrate from one compartment to another. Diffusion is therefore modeled as a jump process between neighboring compartments. Compartment-based simulation of diffusion as well as its relation to Fick's law of diffusion will be introduced in more detail in chapter \eqref{stochdiff}. 
+\fi
